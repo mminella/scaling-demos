@@ -78,7 +78,9 @@ public class BatchConfiguration {
 		public IntegrationFlow outboundFlow(AmqpTemplate amqpTemplate) {
 			return IntegrationFlows.from("requests")
 					.handle(Amqp.outboundGateway(amqpTemplate)
-							.routingKey("requests"))
+							.routingKey("requests")
+							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
+							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
 					.get();
 		}
 
@@ -116,7 +118,9 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow replyFlow(ConnectionFactory connectionFactory) {
 			return IntegrationFlows
-					.from(Amqp.inboundGateway(connectionFactory, "replies"))
+					.from(Amqp.inboundGateway(connectionFactory, "replies")
+							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
+							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
 					.channel(replies())
 					.get();
 		}
@@ -202,7 +206,9 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow mesagesIn(ConnectionFactory connectionFactory) {
 			return IntegrationFlows
-					.from(Amqp.inboundGateway(connectionFactory, "requests"))
+					.from(Amqp.inboundGateway(connectionFactory, "requests")
+							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
+							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
 					.channel(requests())
 					.get();
 		}
@@ -211,7 +217,9 @@ public class BatchConfiguration {
 		public IntegrationFlow outgoingReplies(AmqpTemplate template) {
 			return IntegrationFlows.from("replies")
 					.handle(Amqp.outboundGateway(template)
-							.routingKey("replies"))
+							.routingKey("replies")
+							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
+							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
 					.get();
 		}
 
