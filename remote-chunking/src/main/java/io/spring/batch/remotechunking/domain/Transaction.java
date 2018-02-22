@@ -57,4 +57,13 @@ public class Transaction implements Serializable {
 	public void setAccount(String account) {
 		this.account = account;
 	}
+
+	@Override
+	public String toString() {
+		return "Transaction{" +
+				"account='" + account + '\'' +
+				", timestamp=" + timestamp +
+				", amount=" + amount +
+				'}';
+	}
 }

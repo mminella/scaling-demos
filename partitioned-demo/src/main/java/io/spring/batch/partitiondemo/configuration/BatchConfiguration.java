@@ -76,7 +76,7 @@ public class BatchConfiguration {
 			JobExplorer jobExplorer,
 			ApplicationContext context,
 			Environment environment) throws Exception {
-		Resource resource = context.getResource("file:///Users/mminella/Documents/IntelliJWorkspace/spring/scaling-demos/partitioned-demo/target/partitioned-demo-0.0.1-SNAPSHOT.jar");
+		Resource resource = context.getResource("file:///Users/mminella/Documents/IntelliJWorkspace/scaling-demos/partitioned-demo/target/partitioned-demo-0.0.1-SNAPSHOT.jar");
 
 		DeployerPartitionHandler partitionHandler = new DeployerPartitionHandler(taskLauncher, jobExplorer, resource, "step1");
 
@@ -87,7 +87,7 @@ public class BatchConfiguration {
 		commandLineArgs.add("--spring.datasource.initialize=false");
 		partitionHandler.setCommandLineArgsProvider(new PassThroughCommandLineArgsProvider(commandLineArgs));
 		partitionHandler.setEnvironmentVariablesProvider(new SimpleEnvironmentVariablesProvider(environment));
-		partitionHandler.setMaxWorkers(1);
+		partitionHandler.setMaxWorkers(3);
 		partitionHandler.setApplicationName("PartitionedBatchJobTask");
 
 		return partitionHandler;

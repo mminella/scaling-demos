@@ -77,10 +77,8 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow outboundFlow(AmqpTemplate amqpTemplate) {
 			return IntegrationFlows.from("requests")
-					.handle(Amqp.outboundGateway(amqpTemplate)
-							.routingKey("requests")
-							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
-							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
+					.handle(Amqp.outboundAdapter(amqpTemplate)
+							.routingKey("requests"))
 					.get();
 		}
 
@@ -118,9 +116,7 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow replyFlow(ConnectionFactory connectionFactory) {
 			return IntegrationFlows
-					.from(Amqp.inboundGateway(connectionFactory, "replies")
-							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
-							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
+					.from(Amqp.inboundAdapter(connectionFactory, "replies"))
 					.channel(replies())
 					.get();
 		}
@@ -206,9 +202,7 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow mesagesIn(ConnectionFactory connectionFactory) {
 			return IntegrationFlows
-					.from(Amqp.inboundGateway(connectionFactory, "requests")
-							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
-							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
+					.from(Amqp.inboundAdapter(connectionFactory, "requests"))
 					.channel(requests())
 					.get();
 		}
@@ -216,36 +210,26 @@ public class BatchConfiguration {
 		@Bean
 		public IntegrationFlow outgoingReplies(AmqpTemplate template) {
 			return IntegrationFlows.from("replies")
-					.handle(Amqp.outboundGateway(template)
-							.routingKey("replies")
-							.mappedRequestHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS")
-							.mappedReplyHeaders("correlationId", "sequenceNumber", "sequenceSize", "STANDARD_REQUEST_HEADERS"))
+					.handle(Amqp.outboundAdapter(template)
+							.routingKey("replies"))
 					.get();
 		}
 
 		@Bean
-		@ServiceActivator(inputChannel = "requests")
-		public AggregatorFactoryBean serviceActivator() throws Exception {
-			AggregatorFactoryBean aggregatorFactoryBean = new AggregatorFactoryBean();
-			aggregatorFactoryBean.setProcessorBean(chunkProcessorChunkHandler());
-			aggregatorFactoryBean.setOutputChannel(replies());
-
-			return aggregatorFactoryBean;
-		}
-
-		@Bean
+		@ServiceActivator(inputChannel = "requests", outputChannel = "replies", sendTimeout = "10000")
 		public ChunkProcessorChunkHandler<Transaction> chunkProcessorChunkHandler() {
 			ChunkProcessorChunkHandler<Transaction> chunkProcessorChunkHandler = new ChunkProcessorChunkHandler<>();
 			chunkProcessorChunkHandler.setChunkProcessor(
 					new SimpleChunkProcessor<>((transaction) -> {
+						System.out.println(">> processing transaction: " + transaction);
 						Thread.sleep(5);
 						return transaction;
 					}, writer(null)));
+
 			return chunkProcessorChunkHandler;
 		}
 
 		@Bean
-		@StepScope
 		public JdbcBatchItemWriter<Transaction> writer(DataSource dataSource) {
 			return new JdbcBatchItemWriterBuilder<Transaction>()
 					.dataSource(dataSource)

@@ -15,6 +15,7 @@
  */
 package io.spring.batch.partitiondemo.domain;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -55,5 +56,14 @@ public class Transaction {
 
 	public void setAccount(String account) {
 		this.account = account;
+	}
+
+	@Override
+	public String toString() {
+		return "Transaction{" +
+				"account='" + account + '\'' +
+				", timestamp=" + timestamp +
+				", amount=" + amount +
+				'}';
 	}
 }

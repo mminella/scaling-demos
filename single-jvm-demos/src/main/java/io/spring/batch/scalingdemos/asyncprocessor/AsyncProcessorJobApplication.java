@@ -107,7 +107,7 @@ public class AsyncProcessorJobApplication {
 	@Bean
 	public ItemProcessor<Transaction, Transaction> processor() {
 		return (transaction) -> {
-			Thread.sleep(100);
+			Thread.sleep(5);
 			return transaction;
 		};
 	}
@@ -147,7 +147,7 @@ public class AsyncProcessorJobApplication {
 	}
 
 	public static void main(String[] args) {
-		String [] newArgs = new String[] {"inputFlatFile=/data/csv/transactions.csv"};
+		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv"};
 
 		SpringApplication.run(AsyncProcessorJobApplication.class, newArgs);
 	}

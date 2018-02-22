@@ -100,12 +100,12 @@ public class MultithreadedJobApplication {
 				.<Transaction, Transaction>chunk(100)
 				.reader(fileTransactionReader(null))
 				.writer(writer(null))
-//				.taskExecutor(taskExecutor)
+				.taskExecutor(taskExecutor)
 				.build();
 	}
 
 	public static void main(String[] args) {
-		String [] newArgs = new String[] {"inputFlatFile=/data/csv/transactions.csv"};
+		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv"};
 
 		SpringApplication.run(MultithreadedJobApplication.class, newArgs);
 	}

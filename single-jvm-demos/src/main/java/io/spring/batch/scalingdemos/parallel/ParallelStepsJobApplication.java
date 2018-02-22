@@ -147,8 +147,8 @@ public class ParallelStepsJobApplication {
 	}
 
 	public static void main(String[] args) {
-		String [] newArgs = new String[] {"inputFlatFile=/data/csv/transactions.csv",
-							"inputXmlFile=/data/xml/transactions.xml"};
+		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv",
+							"inputXmlFile=/data/xml/bigtransactions.xml"};
 
 		SpringApplication.run(ParallelStepsJobApplication.class, newArgs);
 	}
