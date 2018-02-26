@@ -135,17 +135,17 @@ public class AsyncProcessorJobApplication {
 				.writer(asyncItemWriter())
 				.build();
 	}
-
-	@Bean
-	public Step step1() {
-		return this.stepBuilderFactory.get("step1")
-				.<Transaction, Transaction>chunk(100)
-				.reader(fileTransactionReader(null))
-				.processor(processor())
-				.writer(writer(null))
-				.build();
-	}
-
+//
+//	@Bean
+//	public Step step1() {
+//		return this.stepBuilderFactory.get("step1")
+//				.<Transaction, Transaction>chunk(100)
+//				.reader(fileTransactionReader(null))
+//				.processor(processor())
+//				.writer(writer(null))
+//				.build();
+//	}
+//
 	public static void main(String[] args) {
 		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv"};
 
