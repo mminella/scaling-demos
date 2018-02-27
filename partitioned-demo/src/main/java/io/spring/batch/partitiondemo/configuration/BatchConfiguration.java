@@ -17,6 +17,7 @@ package io.spring.batch.partitiondemo.configuration;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.sql.DataSource;
 
 import io.spring.batch.partitiondemo.domain.Transaction;
@@ -41,7 +42,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.task.batch.partition.DeployerPartitionHandler;
 import org.springframework.cloud.task.batch.partition.DeployerStepExecutionHandler;
-import org.springframework.cloud.task.batch.partition.EnvironmentVariablesProvider;
 import org.springframework.cloud.task.batch.partition.PassThroughCommandLineArgsProvider;
 import org.springframework.cloud.task.batch.partition.SimpleEnvironmentVariablesProvider;
 import org.springframework.context.ApplicationContext;
@@ -51,7 +51,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 
 /**
  * @author Michael Minella
