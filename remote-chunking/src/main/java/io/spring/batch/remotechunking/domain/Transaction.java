@@ -18,13 +18,10 @@ package io.spring.batch.remotechunking.domain;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * @author Michael Minella
  */
-@XmlRootElement(name="transaction")
 public class Transaction implements Serializable {
 
 	private String account;
@@ -33,7 +30,6 @@ public class Transaction implements Serializable {
 
 	private BigDecimal amount;
 
-	@XmlJavaTypeAdapter(JaxbDateSerializer.class)
 	public Date getTimestamp() {
 		return timestamp;
 	}
