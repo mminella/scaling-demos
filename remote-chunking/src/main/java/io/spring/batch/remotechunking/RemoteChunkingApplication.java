@@ -5,10 +5,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.integration.config.annotation.EnableBatchIntegration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @EnableBatchProcessing
+@EnableBatchIntegration
 @SpringBootApplication
 public class RemoteChunkingApplication {
 

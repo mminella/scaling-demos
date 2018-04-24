@@ -49,6 +49,7 @@
 		<dependency>
 			<groupId>org.springframework.batch</groupId>
 			<artifactId>spring-batch-integration</artifactId>
+			<version>4.1.0.M2</version>
 		</dependency>
 
 		<dependency>
