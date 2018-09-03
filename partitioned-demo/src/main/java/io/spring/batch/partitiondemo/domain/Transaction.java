@@ -15,16 +15,12 @@
  */
 package io.spring.batch.partitiondemo.domain;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * @author Michael Minella
  */
-@XmlRootElement(name="transaction")
 public class Transaction {
 
 	private String account;
@@ -33,7 +29,6 @@ public class Transaction {
 
 	private BigDecimal amount;
 
-	@XmlJavaTypeAdapter(JaxbDateSerializer.class)
 	public Date getTimestamp() {
 		return timestamp;
 	}
