@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 
 import io.spring.batch.partitiondemo.domain.Transaction;
 
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -66,12 +67,29 @@ public class WorkerConfiguration {
 	}
 
 	/*
+	 * Configure outbound flow (replies going to the master)
+	 */
+	@Bean
+	public DirectChannel replies() {
+		return new DirectChannel();
+	}
+
+	@Bean
+	public IntegrationFlow outboundFlow(AmqpTemplate amqpTemplate) {
+		return IntegrationFlows
+				.from(replies())
+				.handle(Amqp.outboundAdapter(amqpTemplate).routingKey("replies"))
+				.get();
+	}
+
+	/*
 	 * Configure the worker step
 	 */
 	@Bean
 	public Step workerStep() {
 		return this.workerStepBuilderFactory.get("workerStep")
 				.inputChannel(requests())
+				.outputChannel(replies())
 				.<Transaction, Transaction>chunk(100)
 				.reader(fileTransactionReader(null))
 				.processor((ItemProcessor<Transaction, Transaction>) transaction -> {

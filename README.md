@@ -50,19 +50,6 @@ server up and running on port `5671`. If you use docker, you can run: `docker ru
 You need to create two durable queues called `requests` and `replies`. You can do
 this from the management console available at `localhost:15672` with credentials: `guest/guest`.
 
-## Remote chunking
-
-```
-$>cd remote-chunking
-$>mvn clean package
-```
-
-Run each of the following commands in a separate terminal:
-
-* Run a first worker: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
-* Run a second worker: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
-* Run the master step: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=master`
-
 ## Remote partitioning
 
 ```
@@ -75,3 +62,16 @@ Run each of the following commands in a separate terminal:
 * Run a first worker step: `java -jar target/partitioned-demo-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
 * Run a second worker step: `java -jar target/partitioned-demo-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
 * Run the master step: `java -jar target/partitioned-demo-0.0.1-SNAPSHOT.jar --spring.profiles.active=master`
+
+## Remote chunking
+
+```
+$>cd remote-chunking
+$>mvn clean package
+```
+
+Run each of the following commands in a separate terminal:
+
+* Run a first worker: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
+* Run a second worker: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker`
+* Run the master step: `java -jar target/remote-chunking-0.0.1-SNAPSHOT.jar --spring.profiles.active=master`

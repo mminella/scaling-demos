@@ -16,6 +16,7 @@
 package io.spring.batch.partitiondemo.configuration;
 
 import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -65,6 +66,22 @@ public class MasterConfiguration {
 	}
 
 	/*
+	 * Configure inbound flow (replies coming from workers)
+	 */
+	@Bean
+	public DirectChannel replies() {
+		return new DirectChannel();
+	}
+
+	@Bean
+	public IntegrationFlow inboundFlow(ConnectionFactory connectionFactory) {
+		return IntegrationFlows
+				.from(Amqp.inboundAdapter(connectionFactory,"replies"))
+				.channel(replies())
+				.get();
+	}
+
+	/*
 	 * Configure the master step
 	 */
 
@@ -84,6 +101,7 @@ public class MasterConfiguration {
 		return this.masterStepBuilderFactory.get("masterStep")
 				.partitioner("workerStep", partitioner(null))
 				.outputChannel(requests())
+				.inputChannel(replies())
 				.build();
 	}
 
