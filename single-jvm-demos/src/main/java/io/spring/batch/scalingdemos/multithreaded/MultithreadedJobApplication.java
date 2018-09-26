@@ -56,7 +56,7 @@ public class MultithreadedJobApplication {
 			@Value("#{jobParameters['inputFlatFile']}") Resource resource) {
 
 		return new FlatFileItemReaderBuilder<Transaction>()
-				.saveState(false)
+				.name("transactionItemReader")
 				.resource(resource)
 				.delimited()
 				.names(new String[] {"account", "amount", "timestamp"})
@@ -77,8 +77,8 @@ public class MultithreadedJobApplication {
 	public JdbcBatchItemWriter<Transaction> writer(DataSource dataSource) {
 		return new JdbcBatchItemWriterBuilder<Transaction>()
 				.dataSource(dataSource)
-				.beanMapped()
 				.sql("INSERT INTO TRANSACTION (ACCOUNT, AMOUNT, TIMESTAMP) VALUES (:account, :amount, :timestamp)")
+				.beanMapped()
 				.build();
 	}
 

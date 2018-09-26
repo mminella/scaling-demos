@@ -18,8 +18,12 @@ package io.spring.batch.scalingdemos.asyncprocessor;
 import javax.sql.DataSource;
 
 import io.spring.batch.scalingdemos.domain.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -39,12 +43,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.util.StopWatch;
 
 /**
  * @author Michael Minella
  */
 @EnableBatchProcessing
 @SpringBootApplication
+@SuppressWarnings("unchecked")
 public class AsyncProcessorJobApplication {
 
 	@Autowired
@@ -86,6 +92,14 @@ public class AsyncProcessorJobApplication {
 	}
 
 	@Bean
+	public ItemProcessor<Transaction, Transaction> processor() {
+		return (transaction) -> {
+			Thread.sleep(5);
+			return transaction;
+		};
+	}
+
+	@Bean
 	public AsyncItemProcessor<Transaction, Transaction> asyncItemProcessor() {
 		AsyncItemProcessor<Transaction, Transaction> processor = new AsyncItemProcessor<>();
 
@@ -105,26 +119,12 @@ public class AsyncProcessorJobApplication {
 	}
 
 	@Bean
-	public ItemProcessor<Transaction, Transaction> processor() {
-		return (transaction) -> {
-			Thread.sleep(5);
-			return transaction;
-		};
-	}
-
-	@Bean
 	public Job asyncJob() {
 		return this.jobBuilderFactory.get("asyncJob")
 				.start(step1async())
+				.listener(new ExecutionTimeJobListener())
 				.build();
 	}
-
-//	@Bean
-//	public Job job1() {
-//		return this.jobBuilderFactory.get("job1")
-//				.start(step1())
-//				.build();
-//	}
 
 	@Bean
 	public Step step1async() {
@@ -135,17 +135,24 @@ public class AsyncProcessorJobApplication {
 				.writer(asyncItemWriter())
 				.build();
 	}
-//
-//	@Bean
-//	public Step step1() {
-//		return this.stepBuilderFactory.get("step1")
-//				.<Transaction, Transaction>chunk(100)
-//				.reader(fileTransactionReader(null))
-//				.processor(processor())
-//				.writer(writer(null))
-//				.build();
-//	}
-//
+
+	class ExecutionTimeJobListener implements JobExecutionListener {
+
+		private Logger logger = LoggerFactory.getLogger(ExecutionTimeJobListener.class);
+		private StopWatch stopWatch = new StopWatch();
+
+		@Override
+		public void beforeJob(JobExecution jobExecution) {
+			stopWatch.start();
+		}
+
+		@Override
+		public void afterJob(JobExecution jobExecution) {
+			stopWatch.stop();
+			logger.info("Job took " + stopWatch.getTotalTimeSeconds() + "s");
+		}
+	}
+
 	public static void main(String[] args) {
 		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv"};
 
