@@ -15,6 +15,7 @@
  */
 package io.spring.batch.scalingdemos.asyncprocessor;
 
+import java.util.concurrent.Future;
 import javax.sql.DataSource;
 
 import io.spring.batch.scalingdemos.domain.Transaction;
@@ -76,7 +77,6 @@ public class AsyncProcessorJobApplication {
 	}
 
 	@Bean
-	@StepScope
 	public JdbcBatchItemWriter<Transaction> writer(DataSource dataSource) {
 		return new JdbcBatchItemWriterBuilder<Transaction>()
 				.dataSource(dataSource)
@@ -129,9 +129,9 @@ public class AsyncProcessorJobApplication {
 	@Bean
 	public Step step1async() {
 		return this.stepBuilderFactory.get("step1async")
-				.<Transaction, Transaction>chunk(100)
+				.<Transaction, Future<Transaction>>chunk(100)
 				.reader(fileTransactionReader(null))
-				.processor((ItemProcessor) asyncItemProcessor())
+				.processor(asyncItemProcessor())
 				.writer(asyncItemWriter())
 				.build();
 	}

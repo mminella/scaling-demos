@@ -27,21 +27,17 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.core.partition.PartitionHandler;
 import org.springframework.batch.core.partition.support.MultiResourcePartitioner;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.MultiResourceItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.batch.item.file.builder.MultiResourceItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.task.batch.partition.DeployerPartitionHandler;
 import org.springframework.cloud.task.batch.partition.DeployerStepExecutionHandler;
-import org.springframework.cloud.task.batch.partition.EnvironmentVariablesProvider;
 import org.springframework.cloud.task.batch.partition.PassThroughCommandLineArgsProvider;
 import org.springframework.cloud.task.batch.partition.SimpleEnvironmentVariablesProvider;
 import org.springframework.context.ApplicationContext;
@@ -51,7 +47,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 
 /**
  * @author Michael Minella
@@ -72,10 +67,11 @@ public class BatchConfiguration {
 	private ConfigurableApplicationContext context;
 
 	@Bean
+	@Profile("master")
 	public DeployerPartitionHandler partitionHandler(TaskLauncher taskLauncher,
 			JobExplorer jobExplorer,
 			ApplicationContext context,
-			Environment environment) throws Exception {
+			Environment environment) {
 		Resource resource = context.getResource("file:///Users/mminella/Documents/IntelliJWorkspace/scaling-demos/partitioned-demo/target/partitioned-demo-0.0.1-SNAPSHOT.jar");
 
 		DeployerPartitionHandler partitionHandler = new DeployerPartitionHandler(taskLauncher, jobExplorer, resource, "step1");
@@ -93,6 +89,24 @@ public class BatchConfiguration {
 		return partitionHandler;
 	}
 
+//	@Bean
+//	public TaskExecutorPartitionHandler partitionHandler() {
+//		TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
+//
+//		partitionHandler.setStep(step1());
+//		partitionHandler.setTaskExecutor(new SimpleAsyncTaskExecutor());
+//
+//		return partitionHandler;
+//	}
+
+
+
+	@Bean
+	@Profile("worker")
+	public DeployerStepExecutionHandler stepExecutionHandler(JobExplorer jobExplorer) {
+		return new DeployerStepExecutionHandler(this.context, jobExplorer, this.jobRepository);
+	}
+
 	@Bean
 	@StepScope
 	public MultiResourcePartitioner partitioner(@Value("#{jobParameters['inputFiles']}") Resource[] resources) {
@@ -102,12 +116,6 @@ public class BatchConfiguration {
 		partitioner.setResources(resources);
 
 		return partitioner;
-	}
-
-	@Bean
-	@Profile("worker")
-	public DeployerStepExecutionHandler stepExecutionHandler(JobExplorer jobExplorer) {
-		return new DeployerStepExecutionHandler(this.context, jobExplorer, this.jobRepository);
 	}
 
 	@Bean
@@ -143,11 +151,12 @@ public class BatchConfiguration {
 	}
 
 	@Bean
-	public Step partitionedMaster(PartitionHandler partitionHandler) {
+	@Profile("master")
+	public Step partitionedMaster() {
 		return this.stepBuilderFactory.get("step1")
 				.partitioner(step1().getName(), partitioner(null))
-				.step(step1())
-				.partitionHandler(partitionHandler)
+//				.step(step1())
+				.partitionHandler(partitionHandler(null, null, null, null))
 				.build();
 	}
 
@@ -160,41 +169,41 @@ public class BatchConfiguration {
 				.build();
 	}
 
-	@Bean
-	@StepScope
-	public MultiResourceItemReader<Transaction> multiResourceItemReader(
-			@Value("#{jobParameters['inputFiles']}") Resource[] resources) {
-
-		return new MultiResourceItemReaderBuilder<Transaction>()
-				.delegate(delegate())
-				.name("multiresourceReader")
-				.resources(resources)
-				.build();
-	}
-
-	@Bean
-	public FlatFileItemReader<Transaction> delegate() {
-		return new FlatFileItemReaderBuilder<Transaction>()
-				.name("flatFileTransactionReader")
-				.delimited()
-				.names(new String[] {"account", "amount", "timestamp"})
-				.fieldSetMapper(fieldSet -> {
-					Transaction transaction = new Transaction();
-
-					transaction.setAccount(fieldSet.readString("account"));
-					transaction.setAmount(fieldSet.readBigDecimal("amount"));
-					transaction.setTimestamp(fieldSet.readDate("timestamp", "yyyy-MM-dd HH:mm:ss"));
-
-					return transaction;
-				})
-				.build();
-	}
+//	@Bean
+//	@StepScope
+//	public MultiResourceItemReader<Transaction> multiResourceItemReader(
+//			@Value("#{jobParameters['inputFiles']}") Resource[] resources) {
+//
+//		return new MultiResourceItemReaderBuilder<Transaction>()
+//				.delegate(delegate())
+//				.name("multiresourceReader")
+//				.resources(resources)
+//				.build();
+//	}
+//
+//	@Bean
+//	public FlatFileItemReader<Transaction> delegate() {
+//		return new FlatFileItemReaderBuilder<Transaction>()
+//				.name("flatFileTransactionReader")
+//				.delimited()
+//				.names(new String[] {"account", "amount", "timestamp"})
+//				.fieldSetMapper(fieldSet -> {
+//					Transaction transaction = new Transaction();
+//
+//					transaction.setAccount(fieldSet.readString("account"));
+//					transaction.setAmount(fieldSet.readBigDecimal("amount"));
+//					transaction.setTimestamp(fieldSet.readDate("timestamp", "yyyy-MM-dd HH:mm:ss"));
+//
+//					return transaction;
+//				})
+//				.build();
+//	}
 
 	@Bean
 	@Profile("!worker")
-	public Job parallelStepsJob() {
-		return this.jobBuilderFactory.get("parallelStepsJob")
-				.start(partitionedMaster(null))
+	public Job partitionedJob() {
+		return this.jobBuilderFactory.get("partitionedJob")
+				.start(partitionedMaster())
 				.build();
 	}
 }
