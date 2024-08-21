@@ -21,63 +21,56 @@ import io.spring.batch.scalingdemos.domain.Transaction;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.FlowBuilder;
-import org.springframework.batch.core.job.flow.Flow;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.VirtualThreadTaskExecutor;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author Michael Minella
  */
-@EnableBatchProcessing
 @SpringBootApplication
 public class ParallelStepsJobApplication {
 
-	@Autowired
-	private JobBuilderFactory jobBuilderFactory;
-
-	@Autowired
-	private StepBuilderFactory stepBuilderFactory;
-
 	@Bean
-	public Job parallelStepsJob() {
+	public Job parallelStepsJob(JobRepository jobRepository) {
 		Flow secondFlow = new FlowBuilder<Flow>("secondFlow")
-				.start(step2())
+				.start(step2(null, null))
 				.build();
 
 		Flow parallelFlow = new FlowBuilder<Flow>("parallelFlow")
-				.start(step1())
-				.split(new SimpleAsyncTaskExecutor())
+				.start(step1(null, null))
+				.split(new VirtualThreadTaskExecutor())
 				.add(secondFlow)
 				.build();
 
-		return this.jobBuilderFactory.get("parallelStepsJob")
+		return new JobBuilder("parallelStepsJob", jobRepository)
 				.start(parallelFlow)
 				.end()
 				.build();
 	}
 
 //	@Bean
-//	public Job sequentialStepsJob() {
-//		return this.jobBuilderFactory.get("sequentialStepsJob")
-//				.start(step1())
-//				.next(step2())
+//	public Job sequentialStepsJob(JobRepository jobRepository) {
+//		return new JobBuilder("sequentialStepsJob", jobRepository)
+//				.start(step1(null, null))
+//				.next(step2(null, null))
 //				.build();
 //	}
 
@@ -129,18 +122,18 @@ public class ParallelStepsJobApplication {
 	}
 
 	@Bean
-	public Step step1() {
-		return this.stepBuilderFactory.get("step1")
-				.<Transaction, Transaction>chunk(100)
+	public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+		return new StepBuilder("step1", jobRepository)
+				.<Transaction, Transaction>chunk(100, transactionManager)
 				.reader(xmlTransactionReader(null))
 				.writer(writer(null))
 				.build();
 	}
 
 	@Bean
-	public Step step2() {
-		return this.stepBuilderFactory.get("step2")
-				.<Transaction, Transaction>chunk(100)
+	public Step step2(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+		return new StepBuilder("step2", jobRepository)
+				.<Transaction, Transaction>chunk(100, transactionManager)
 				.reader(fileTransactionReader(null))
 				.writer(writer(null))
 				.build();

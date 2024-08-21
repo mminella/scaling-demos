@@ -20,15 +20,16 @@ import javax.sql.DataSource;
 import io.spring.batch.remotechunking.domain.Transaction;
 
 import org.springframework.amqp.core.AmqpTemplate;
-import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.item.SimpleChunkProcessor;
 import org.springframework.batch.core.step.tasklet.TaskletStep;
 import org.springframework.batch.integration.chunk.ChunkMessageChannelItemWriter;
@@ -38,7 +39,6 @@ import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,10 +48,9 @@ import org.springframework.integration.amqp.dsl.Amqp;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.QueueChannel;
-import org.springframework.integration.config.AggregatorFactoryBean;
 import org.springframework.integration.core.MessagingTemplate;
 import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.dsl.IntegrationFlows;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author Michael Minella
@@ -61,13 +60,7 @@ public class BatchConfiguration {
 
 	@Configuration
 	@Profile("!worker")
-	public static class MasterConfiguration {
-
-		@Autowired
-		private JobBuilderFactory jobBuilderFactory;
-
-		@Autowired
-		private StepBuilderFactory stepBuilderFactory;
+	public static class ManagerConfiguration {
 
 		@Bean
 		public DirectChannel requests() {
@@ -76,7 +69,7 @@ public class BatchConfiguration {
 
 		@Bean
 		public IntegrationFlow outboundFlow(AmqpTemplate amqpTemplate) {
-			return IntegrationFlows.from("requests")
+			return IntegrationFlow.from("requests")
 					.handle(Amqp.outboundAdapter(amqpTemplate)
 							.routingKey("requests"))
 					.get();
@@ -104,7 +97,7 @@ public class BatchConfiguration {
 		public RemoteChunkHandlerFactoryBean<Transaction> chunkHandler() {
 			RemoteChunkHandlerFactoryBean<Transaction> remoteChunkHandlerFactoryBean = new RemoteChunkHandlerFactoryBean<>();
 			remoteChunkHandlerFactoryBean.setChunkWriter(itemWriter());
-			remoteChunkHandlerFactoryBean.setStep(step1());
+			remoteChunkHandlerFactoryBean.setStep(step1(null, null));
 			return remoteChunkHandlerFactoryBean;
 		}
 
@@ -115,7 +108,7 @@ public class BatchConfiguration {
 
 		@Bean
 		public IntegrationFlow replyFlow(ConnectionFactory connectionFactory) {
-			return IntegrationFlows
+			return IntegrationFlow
 					.from(Amqp.inboundAdapter(connectionFactory, "replies"))
 					.channel(replies())
 					.get();
@@ -144,18 +137,18 @@ public class BatchConfiguration {
 		}
 
 		@Bean
-		public TaskletStep step1() {
-			return this.stepBuilderFactory.get("step1")
-					.<Transaction, Transaction>chunk(100)
+		public TaskletStep step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+			return new StepBuilder("step1", jobRepository)
+					.<Transaction, Transaction>chunk(100, transactionManager)
 					.reader(fileTransactionReader(null))
 					.writer(itemWriter())
 					.build();
 		}
 
 		@Bean
-		public Job remoteChunkingJob() {
-			return this.jobBuilderFactory.get("remoteChunkingJob")
-					.start(step1())
+		public Job remoteChunkingJob(JobRepository jobRepository) {
+			return new JobBuilder("remoteChunkingJob", jobRepository)
+					.start(step1(null, null))
 					.build();
 		}
 	}
@@ -201,7 +194,7 @@ public class BatchConfiguration {
 
 		@Bean
 		public IntegrationFlow mesagesIn(ConnectionFactory connectionFactory) {
-			return IntegrationFlows
+			return IntegrationFlow
 					.from(Amqp.inboundAdapter(connectionFactory, "requests"))
 					.channel(requests())
 					.get();
@@ -209,7 +202,7 @@ public class BatchConfiguration {
 
 		@Bean
 		public IntegrationFlow outgoingReplies(AmqpTemplate template) {
-			return IntegrationFlows.from("replies")
+			return IntegrationFlow.from("replies")
 					.handle(Amqp.outboundAdapter(template)
 							.routingKey("replies"))
 					.get();

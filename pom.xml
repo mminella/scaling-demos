@@ -26,8 +26,8 @@
 
 	<modules>
 		<module>single-jvm-demos</module>
-		<module>remote-chunking</module>
 		<module>partitioned-demo</module>
+		<module>remote-chunking</module>
 	</modules>
 
 	<!--<dependencies>-->

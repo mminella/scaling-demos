@@ -17,7 +17,7 @@ package io.spring.batch.scalingdemos.domain;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import javax.xml.bind.annotation.adapters.XmlAdapter;
+import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 
 /**
  * @author Michael Minella

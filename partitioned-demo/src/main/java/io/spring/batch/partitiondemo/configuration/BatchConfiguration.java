@@ -17,18 +17,19 @@ package io.spring.batch.partitiondemo.configuration;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.sql.DataSource;
 
 import io.spring.batch.partitiondemo.domain.Transaction;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.MultiResourcePartitioner;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
@@ -40,6 +41,7 @@ import org.springframework.cloud.task.batch.partition.DeployerPartitionHandler;
 import org.springframework.cloud.task.batch.partition.DeployerStepExecutionHandler;
 import org.springframework.cloud.task.batch.partition.PassThroughCommandLineArgsProvider;
 import org.springframework.cloud.task.batch.partition.SimpleEnvironmentVariablesProvider;
+import org.springframework.cloud.task.repository.TaskRepository;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -47,6 +49,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author Michael Minella
@@ -55,26 +58,18 @@ import org.springframework.core.io.Resource;
 public class BatchConfiguration {
 
 	@Autowired
-	private JobBuilderFactory jobBuilderFactory;
-
-	@Autowired
-	private StepBuilderFactory stepBuilderFactory;
-
-	@Autowired
-	private JobRepository jobRepository;
-
-	@Autowired
 	private ConfigurableApplicationContext context;
 
 	@Bean
-	@Profile("master")
+	@Profile("manager")
 	public DeployerPartitionHandler partitionHandler(TaskLauncher taskLauncher,
 			JobExplorer jobExplorer,
 			ApplicationContext context,
-			Environment environment) {
+			Environment environment,
+			TaskRepository taskRepository) {
 		Resource resource = context.getResource("file:///Users/mminella/Documents/IntelliJWorkspace/scaling-demos/partitioned-demo/target/partitioned-demo-0.0.1-SNAPSHOT.jar");
 
-		DeployerPartitionHandler partitionHandler = new DeployerPartitionHandler(taskLauncher, jobExplorer, resource, "step1");
+		DeployerPartitionHandler partitionHandler = new DeployerPartitionHandler(taskLauncher, jobExplorer, resource, "step1", taskRepository);
 
 		List<String> commandLineArgs = new ArrayList<>(3);
 		commandLineArgs.add("--spring.profiles.active=worker");
@@ -99,12 +94,10 @@ public class BatchConfiguration {
 //		return partitionHandler;
 //	}
 
-
-
 	@Bean
 	@Profile("worker")
-	public DeployerStepExecutionHandler stepExecutionHandler(JobExplorer jobExplorer) {
-		return new DeployerStepExecutionHandler(this.context, jobExplorer, this.jobRepository);
+	public DeployerStepExecutionHandler stepExecutionHandler(JobExplorer jobExplorer, JobRepository jobRepository) {
+		return new DeployerStepExecutionHandler(this.context, jobExplorer, jobRepository);
 	}
 
 	@Bean
@@ -151,19 +144,19 @@ public class BatchConfiguration {
 	}
 
 	@Bean
-	@Profile("master")
-	public Step partitionedMaster() {
-		return this.stepBuilderFactory.get("step1")
-				.partitioner(step1().getName(), partitioner(null))
+	@Profile("manager")
+	public Step partitionedMaster(JobRepository jobRepository) {
+		return new StepBuilder("step1", jobRepository)
+				.partitioner(step1(null, null).getName(), partitioner(null))
 //				.step(step1())
-				.partitionHandler(partitionHandler(null, null, null, null))
+				.partitionHandler(partitionHandler(null, null, null, null, null))
 				.build();
 	}
 
 	@Bean
-	public Step step1() {
-		return this.stepBuilderFactory.get("step1")
-				.<Transaction, Transaction>chunk(100)
+	public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+		return new StepBuilder("step1", jobRepository)
+				.<Transaction, Transaction>chunk(100, transactionManager)
 				.reader(fileTransactionReader(null))
 				.writer(writer(null))
 				.build();
@@ -201,9 +194,9 @@ public class BatchConfiguration {
 
 	@Bean
 	@Profile("!worker")
-	public Job partitionedJob() {
-		return this.jobBuilderFactory.get("partitionedJob")
-				.start(partitionedMaster())
+	public Job partitionedJob(JobRepository jobRepository) {
+		return new JobBuilder("partionedJob", jobRepository)
+				.start(partitionedMaster(null))
 				.build();
 	}
 }

@@ -16,16 +16,17 @@
 package io.spring.batch.scalingdemos.asyncprocessor;
 
 import java.util.concurrent.Future;
+
 import javax.sql.DataSource;
 
 import io.spring.batch.scalingdemos.domain.Transaction;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.integration.async.AsyncItemProcessor;
 import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.ItemProcessor;
@@ -33,26 +34,19 @@ import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.VirtualThreadTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author Michael Minella
  */
-@EnableBatchProcessing
 @SpringBootApplication
 public class AsyncProcessorJobApplication {
-
-	@Autowired
-	private JobBuilderFactory jobBuilderFactory;
-
-	@Autowired
-	private StepBuilderFactory stepBuilderFactory;
 
 	@Bean
 	@StepScope
@@ -90,7 +84,7 @@ public class AsyncProcessorJobApplication {
 		AsyncItemProcessor<Transaction, Transaction> processor = new AsyncItemProcessor<>();
 
 		processor.setDelegate(processor());
-		processor.setTaskExecutor(new SimpleAsyncTaskExecutor());
+		processor.setTaskExecutor(new VirtualThreadTaskExecutor());
 
 		return processor;
 	}
@@ -104,6 +98,8 @@ public class AsyncProcessorJobApplication {
 		return writer;
 	}
 
+
+	// Adds 5 minutes to the processing of the job where the file is 60000 records long
 	@Bean
 	public ItemProcessor<Transaction, Transaction> processor() {
 		return (transaction) -> {
@@ -113,39 +109,39 @@ public class AsyncProcessorJobApplication {
 	}
 
 	@Bean
-	public Job asyncJob() {
-		return this.jobBuilderFactory.get("asyncJob")
-				.start(step1async())
+	public Job asyncJob(JobRepository jobRepository) {
+		return new JobBuilder("asyncJob", jobRepository)
+				.start(step1async(null, null))
 				.build();
 	}
 
 //	@Bean
-//	public Job job1() {
-//		return this.jobBuilderFactory.get("job1")
-//				.start(step1())
+//	public Job job1(JobRepository jobRepository) {
+//		return new JobBuilder("job1", jobRepository)
+//				.start(step1(null, null))
 //				.build();
 //	}
 
 	@Bean
-	public Step step1async() {
-		return this.stepBuilderFactory.get("step1async")
-				.<Transaction, Future<Transaction>>chunk(100)
+	public Step step1async(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+		return new StepBuilder("step1async", jobRepository)
+				.<Transaction, Future<Transaction>>chunk(100, transactionManager)
 				.reader(fileTransactionReader(null))
 				.processor(asyncItemProcessor())
 				.writer(asyncItemWriter())
 				.build();
 	}
-//
+
 //	@Bean
-//	public Step step1() {
-//		return this.stepBuilderFactory.get("step1")
-//				.<Transaction, Transaction>chunk(100)
+//	public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+//		return new StepBuilder("step1", jobRepository)
+//				.<Transaction, Transaction>chunk(100, transactionManager)
 //				.reader(fileTransactionReader(null))
 //				.processor(processor())
 //				.writer(writer(null))
 //				.build();
 //	}
-//
+
 	public static void main(String[] args) {
 		String [] newArgs = new String[] {"inputFlatFile=/data/csv/bigtransactions.csv"};
 

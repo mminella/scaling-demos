@@ -17,8 +17,8 @@ package io.spring.batch.scalingdemos.domain;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * @author Michael Minella
